@@ -5,6 +5,14 @@ import { MapSvg } from 'components/MapSvg';
 
 const init = { w: 500, h: 500, x: 40, n: 100, i: 10 }
 
+const nextn = (population: Population, i: number): Promise<Population> => {
+    return new Promise((resolve) => setTimeout(() => {
+        let tmp = population
+        for (let j = 0; j < i; j++) tmp = genetic.next(tmp)
+        resolve(tmp)
+    }, 100))
+}
+
 const App: React.FC = () => {
     const [w, setW] = useState<number>(init.w)
     const [h, setH] = useState<number>(init.h)
@@ -13,16 +21,16 @@ const App: React.FC = () => {
     const [i, setI] = useState<number>(init.i)
     const [map, setMap] = useState<Map>(genetic.map(init.w, init.h, init.x))
     const [population, setPopulation] = useState<Population>(genetic.population(map, init.n))
-    const [processing] = useState<boolean>(false)
+    const [processing, setProcessing] = useState<boolean>(false)
 
     const mapIsValid = true
         && w >= 100 && w <= 1000
         && h >= 100 && h <= 1000
         && x >= 10 && x <= 100
 
-    const populationIsValid = n >= 10 && n <= 100
+    const populationIsValid = mapIsValid && n >= 10 && n <= 100
 
-    const generationIsValid = i >= 1 && i <= 1000
+    const generationIsValid = populationIsValid && i >= 1 && i <= 1000
 
     useEffect(() => {
         if (mapIsValid) setMap(genetic.map(w, h, x))
@@ -41,13 +49,12 @@ const App: React.FC = () => {
     }
 
     const newGeneration = () => {
-        if (!generationIsValid) return
-
-        let tmp = population
-        for (let j = 0; j < n; j++) {
-            tmp = genetic.next(tmp)
-        }
-        setPopulation(tmp)
+        if (!generationIsValid) return;
+        setProcessing(true)
+        nextn(population, i).then(population => {
+            setPopulation(population)
+            setProcessing(false)
+        })
     }
 
     return (
@@ -152,7 +159,10 @@ const App: React.FC = () => {
                         </fieldset>
                         <hr />
                         <p>
-                            Distance: {genetic.fitness(population[0]).toFixed(0)}
+                            {processing
+                                ? 'Processing...'
+                                : `Distance: ${genetic.fitness(population[0]).toFixed(0)}`
+                            }
                         </p>
                     </form>
                 </div>
